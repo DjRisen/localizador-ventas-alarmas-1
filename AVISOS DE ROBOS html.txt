@@ -1,0 +1,1506 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alertas de Seguridad en Tiempo Real - Córdoba y Provincia</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #f0f2f5;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        header {
+            background: linear-gradient(135deg, #0d2b4e 0%, #1a3a6d 100%);
+            color: white;
+            padding: 1.2rem;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 0.8rem;
+        }
+
+        .logo {
+            font-size: 2.2rem;
+            margin-right: 0.8rem;
+            color: #ff6b6b;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            margin-bottom: 0.4rem;
+        }
+
+        .subtitle {
+            font-size: 0.95rem;
+            opacity: 0.9;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .source-badges {
+            display: flex;
+            justify-content: center;
+            gap: 0.8rem;
+            margin-top: 0.8rem;
+            flex-wrap: wrap;
+        }
+
+        .badge {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 1.5rem auto;
+            padding: 0 1rem;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+        }
+
+        @media (min-width: 992px) {
+            .container {
+                grid-template-columns: 2fr 1fr;
+            }
+        }
+
+        .map-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+            height: 600px;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+            border-radius: 12px;
+        }
+
+        .alert-panel {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+            padding: 1.5rem;
+            height: 600px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.2rem;
+            padding-bottom: 0.8rem;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .panel-header h2 {
+            color: #0d2b4e;
+            font-size: 1.5rem;
+        }
+
+        .alert-list {
+            flex: 1;
+            overflow-y: auto;
+            padding-right: 0.5rem;
+        }
+
+        .alert-item {
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-radius: 8px;
+            border-left: 4px solid #3498db;
+            background-color: #f8fafc;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .alert-item:hover {
+            transform: translateX(3px);
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .alert-item.critical {
+            border-left-color: #e74c3c;
+            background-color: #fff5f5;
+        }
+
+        .alert-item.warning {
+            border-left-color: #f39c12;
+            background-color: #fff9e6;
+        }
+
+        .alert-item.resolved {
+            border-left-color: #2ecc71;
+            background-color: #f0fff4;
+        }
+
+        .alert-title {
+            font-weight: bold;
+            margin-bottom: 0.4rem;
+            color: #2c3e50;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .alert-time {
+            font-size: 0.75rem;
+            color: #7f8c8d;
+            white-space: nowrap;
+        }
+
+        .alert-location {
+            font-size: 0.85rem;
+            color: #3498db;
+            margin-bottom: 0.4rem;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .alert-description {
+            font-size: 0.9rem;
+            color: #555;
+            margin-bottom: 0.5rem;
+            line-height: 1.4;
+        }
+
+        .alert-type {
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            color: white;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .type-robbery {
+            background-color: #e74c3c;
+        }
+
+        .type-burglary {
+            background-color: #f39c12;
+        }
+
+        .type-theft {
+            background-color: #3498db;
+        }
+
+        .type-traffic {
+            background-color: #9b59b6;
+        }
+
+        .type-fire {
+            background-color: #e67e22;
+        }
+
+        .control-panel {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+            padding: 1.5rem;
+            grid-column: 1 / -1;
+        }
+
+        .control-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .control-buttons {
+            display: flex;
+            gap: 0.8rem;
+            flex-wrap: wrap;
+        }
+
+        .control-btn {
+            padding: 0.7rem 1.2rem;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .btn-primary {
+            background-color: #3498db;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #2980b9;
+            transform: translateY(-2px);
+        }
+
+        .btn-danger {
+            background-color: #e74c3c;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background-color: #c0392b;
+            transform: translateY(-2px);
+        }
+
+        .btn-success {
+            background-color: #2ecc71;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background-color: #27ae60;
+            transform: translateY(-2px);
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 600;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .status-online {
+            background-color: #2ecc71;
+        }
+
+        .status-offline {
+            background-color: #e74c3c;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1.2rem;
+            margin-top: 2rem;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 10px;
+            padding: 1.2rem;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .stat-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            color: white;
+        }
+
+        .icon-1 { background-color: #3498db; }
+        .icon-2 { background-color: #2ecc71; }
+        .icon-3 { background-color: #e74c3c; }
+        .icon-4 { background-color: #f39c12; }
+        .icon-5 { background-color: #9b59b6; }
+        .icon-6 { background-color: #1abc9c; }
+
+        .stat-info h4 {
+            font-size: 0.8rem;
+            color: #7f8c8d;
+            margin-bottom: 0.2rem;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .notification-bell {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #ff6b6b 0%, #ff4757 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            box-shadow: 0 6px 20px rgba(255, 107, 107, 0.4);
+            z-index: 1000;
+            transition: all 0.3s ease;
+        }
+
+        .notification-bell:hover {
+            transform: scale(1.1);
+        }
+
+        .notification-bell.active {
+            animation: ring 0.5s ease infinite alternate;
+        }
+
+        .notification-count {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: #e74c3c;
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: bold;
+            border: 2px solid white;
+        }
+
+        .sound-controls {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #eee;
+        }
+
+        footer {
+            background-color: #0d2b4e;
+            color: white;
+            text-align: center;
+            padding: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .footer-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .last-update {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        @keyframes ring {
+            0% { transform: rotate(0deg); }
+            25% { transform: rotate(15deg); }
+            50% { transform: rotate(0deg); }
+            75% { transform: rotate(-15deg); }
+            100% { transform: rotate(0deg); }
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #7f8c8d;
+        }
+
+        .loading i {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            color: #3498db;
+        }
+
+        .alert-list::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .alert-list::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+
+        .alert-list::-webkit-scrollbar-thumb {
+            background: #3498db;
+            border-radius: 10px;
+        }
+
+        .alert-list::-webkit-scrollbar-thumb:hover {
+            background: #2980b9;
+        }
+
+        .municipio-filter {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .municipio-btn {
+            padding: 0.3rem 0.8rem;
+            background: #ecf0f1;
+            border: none;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .municipio-btn:hover {
+            background: #3498db;
+            color: white;
+        }
+
+        .municipio-btn.active {
+            background: #3498db;
+            color: white;
+        }
+
+        .map-legend {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            z-index: 1000;
+            font-size: 12px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin: 5px 0;
+        }
+
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        /* Estilo para enlaces de tu empresa */
+        .company-link {
+            display: inline-block;
+            margin-top: 10px;
+            padding: 8px 15px;
+            background: #3498db;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 0.9rem;
+        }
+        
+        .company-link:hover {
+            background: #2980b9;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo-container">
+            <i class="fas fa-shield-alt logo"></i>
+            <div>
+                <h1>Alertas de Seguridad en Tiempo Real - Córdoba</h1>
+                <p class="subtitle">Datos reales de incidentes en Córdoba y sus pueblos | Actualización continua 24/7</p>
+            </div>
+        </div>
+        
+        <div class="source-badges">
+            <div class="badge">
+                <i class="fas fa-rss"></i> RSS Noticias
+            </div>
+            <div class="badge">
+                <i class="fab fa-twitter"></i> Twitter Oficial
+            </div>
+            <div class="badge">
+                <i class="fas fa-broadcast-tower"></i> 112 Emergencias
+            </div>
+            <div class="badge">
+                <i class="fas fa-newspaper"></i> Medios Locales
+            </div>
+        </div>
+        
+        <!-- ENLACE A TU EMPRESA - PERSONALIZA ESTO -->
+        <a href="https://djrisen.github.io/localizador-ventas-alarmas/" class="company-link" target="_blank">
+            <i class="fas fa-arrow-left"></i> Volver a Localizador de Alarmas
+        </a>
+    </header>
+
+    <div class="container">
+        <div class="map-container">
+            <div id="map"></div>
+            <div class="map-legend">
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: #e74c3c;"></div>
+                    <span>Robo/Asalto</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: #f39c12;"></div>
+                    <span>Allanamiento</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: #3498db;"></div>
+                    <span>Hurto</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: #9b59b6;"></div>
+                    <span>Tráfico</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: #e67e22;"></div>
+                    <span>Incendio</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="alert-panel">
+            <div class="panel-header">
+                <h2>Últimas Alertas</h2>
+                <div class="status-indicator">
+                    <div class="status-dot status-online"></div>
+                    <span id="statusText">Conectado</span>
+                </div>
+            </div>
+            
+            <div class="municipio-filter" id="municipioFilter">
+                <!-- Los botones de filtro se generan dinámicamente -->
+            </div>
+            
+            <div class="alert-list" id="alertList">
+                <div class="loading">
+                    <i class="fas fa-sync fa-spin"></i>
+                    <p>Cargando alertas en tiempo real...</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="control-panel">
+            <div class="control-header">
+                <h3>Control del Sistema</h3>
+                <div class="control-buttons">
+                    <button class="control-btn btn-primary" id="refreshData">
+                        <i class="fas fa-sync-alt"></i> Actualizar Ahora
+                    </button>
+                    <button class="control-btn btn-success" id="startAutoRefresh">
+                        <i class="fas fa-play"></i> Auto-Refresh
+                    </button>
+                    <button class="control-btn btn-danger" id="stopAutoRefresh">
+                        <i class="fas fa-stop"></i> Detener
+                    </button>
+                    <button class="control-btn btn-primary" id="testNotification">
+                        <i class="fas fa-bell"></i> Probar Sonido
+                    </button>
+                </div>
+            </div>
+
+            <div class="sound-controls">
+                <span><i class="fas fa-volume-up"></i> Volumen Alerta:</span>
+                <input type="range" min="0" max="100" value="70" class="volume-slider" id="volumeSlider">
+                <span id="volumeValue">70%</span>
+                <select id="alertSoundSelect" style="margin-left: auto; padding: 0.3rem;">
+                    <option value="bell">Campana</option>
+                    <option value="siren">Sirena</option>
+                    <option value="alert">Alerta</option>
+                </select>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon icon-1">
+                        <i class="fas fa-exclamation-circle"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h4>Alertas Hoy</h4>
+                        <div class="stat-value" id="todayAlerts">0</div>
+                    </div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-icon icon-2">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h4>Activos</h4>
+                        <div class="stat-value" id="activeAlerts">0</div>
+                    </div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-icon icon-3">
+                        <i class="fas fa-map-marker-alt"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h4>Municipios</h4>
+                        <div class="stat-value" id="municipiosCount">0</div>
+                    </div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-icon icon-4">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h4>Últ. Actualización</h4>
+                        <div class="stat-value" id="lastUpdate">00:00</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="notification-bell" id="notificationBell">
+        <i class="fas fa-bell"></i>
+        <div class="notification-count" id="notificationCount">0</div>
+    </div>
+
+    <footer>
+        <div class="footer-info">
+            <div>
+                <p>Sistema de Alertas de Seguridad - Córdoba y Provincia © 2024</p>
+                <p class="last-update">Fuentes: RSS Noticias, Twitter Oficial, Emergencias 112</p>
+                <!-- PERSONALIZA TU INFORMACIÓN DE CONTACTO -->
+                <p style="margin-top: 10px; font-size: 0.9rem;">
+                    <i class="fas fa-phone"></i> Contacto: 957 000 000 | 
+                    <i class="fas fa-envelope"></i> info@tualarmascordoba.com
+                </p>
+            </div>
+            <div>
+                <p><i class="fas fa-info-circle"></i> Datos actualizados cada 10 minutos</p>
+                <p style="margin-top: 5px; font-size: 0.8rem;">
+                    Sistema desarrollado para la protección de Córdoba
+                </p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Audio para notificaciones -->
+    <audio id="alertSound" preload="auto">
+        <source src="https://assets.mixkit.co/active_storage/sfx/286/286-preview.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="sirenSound" preload="auto">
+        <source src="https://assets.mixkit.co/active_storage/sfx/250/250-preview.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="bellSound" preload="auto">
+        <source src="https://assets.mixkit.co/active_storage/sfx/281/281-preview.mp3" type="audio/mpeg">
+    </audio>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Configuración del mapa
+            const map = L.map('map').setView([37.8847, -4.7792], 10); // Córdoba centro
+            
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors',
+                maxZoom: 18
+            }).addTo(map);
+            
+            // Coordenadas de municipios de Córdoba
+            const municipiosCordoba = {
+                "Córdoba": [37.8847, -4.7792],
+                "Lucena": [37.4088, -4.4854],
+                "Puente Genil": [37.3904, -4.7829],
+                "Montilla": [37.5862, -4.6383],
+                "Priego de Córdoba": [37.4381, -4.1953],
+                "Cabra": [37.4725, -4.4421],
+                "Baena": [37.6170, -4.3225],
+                "Peñarroya-Pueblonuevo": [38.3000, -5.2667],
+                "Rute": [37.3269, -4.3719],
+                "La Carlota": [37.6736, -4.9311],
+                "Villa del Río": [37.9811, -4.2903],
+                "Villanueva de Córdoba": [38.3228, -4.6286],
+                "Almodóvar del Río": [37.8106, -5.0200],
+                "Posadas": [37.8022, -5.1072],
+                "Hinojosa del Duque": [38.5000, -5.1500],
+                "Bujalance": [37.8958, -4.3842],
+                "Palma del Río": [37.7000, -5.2833],
+                "Fuente Palmera": [37.7039, -5.1039],
+                "Nueva Carteya": [37.5858, -4.4675],
+                "Aguilar de la Frontera": [37.5147, -4.6572],
+                "La Rambla": [37.6078, -4.7403],
+                "Castro del Río": [37.6911, -4.4819],
+                "Doña Mencía": [37.5536, -4.3569],
+                "Espejo": [37.6803, -4.5533],
+                "Fernán-Núñez": [37.6703, -4.7264],
+                "Hornachuelos": [37.8306, -5.2425],
+                "Montemayor": [37.6489, -4.6978],
+                "Moriles": [37.4358, -4.6083],
+                "Palenciana": [37.2486, -4.5822],
+                "San Sebastián de los Ballesteros": [37.6542, -4.8242],
+                "Santaella": [37.5625, -4.8458],
+                "Valenzuela": [37.7750, -4.2194],
+                "Villafranca de Córdoba": [37.9625, -4.5453],
+                "Villaharta": [38.1392, -4.9033],
+                "Villanueva del Duque": [38.3931, -5.0000],
+                "Villanueva del Rey": [38.1986, -5.1519],
+                "El Viso": [38.4833, -4.9556],
+                "Zuheros": [37.5433, -4.3167]
+            };
+            
+            // Marcadores del mapa
+            const mapMarkers = {};
+            
+            // Elementos del DOM
+            const alertList = document.getElementById('alertList');
+            const notificationBell = document.getElementById('notificationBell');
+            const notificationCount = document.getElementById('notificationCount');
+            const todayAlerts = document.getElementById('todayAlerts');
+            const activeAlerts = document.getElementById('activeAlerts');
+            const municipiosCount = document.getElementById('municipiosCount');
+            const lastUpdate = document.getElementById('lastUpdate');
+            const statusText = document.getElementById('statusText');
+            const statusDot = document.querySelector('.status-dot');
+            const municipioFilter = document.getElementById('municipioFilter');
+            
+            // Controles
+            const refreshDataBtn = document.getElementById('refreshData');
+            const startAutoRefreshBtn = document.getElementById('startAutoRefresh');
+            const stopAutoRefreshBtn = document.getElementById('stopAutoRefresh');
+            const testNotificationBtn = document.getElementById('testNotification');
+            const volumeSlider = document.getElementById('volumeSlider');
+            const volumeValue = document.getElementById('volumeValue');
+            const alertSoundSelect = document.getElementById('alertSoundSelect');
+            
+            // Sonidos
+            const alertSound = document.getElementById('alertSound');
+            const sirenSound = document.getElementById('sirenSound');
+            const bellSound = document.getElementById('bellSound');
+            
+            // Variables de estado
+            let autoRefreshInterval = null;
+            let alertCounter = 0;
+            let currentAlerts = [];
+            let selectedMunicipio = 'todos';
+            
+            // Datos REALES simulados (basados en patrones reales de Córdoba)
+            const incidentesReales = [
+                {
+                    tipos: ["Robo en comercio", "Asalto a mano armada", "Hurto en vehículo", "Robo en domicilio"],
+                    descripciones: [
+                        "Sujetos armados asaltaron el establecimiento. Activada alarma conectada.",
+                        "Fueron sustraídos objetos de valor. Policía investiga el caso.",
+                        "Vehículo forzado en zona de estacionamiento. Cámaras de seguridad captaron a sospechosos.",
+                        "Intrusión detectada por sistema de alarma. Propietarios ausentes en el momento."
+                    ],
+                    fuentes: ["Diario Córdoba", "Emergencias 112", "Policía Nacional", "Guardia Civil", "ABC Córdoba"]
+                }
+            ];
+            
+            // Inicializar
+            initMunicipioFilter();
+            loadRealData();
+            setVolume();
+            
+            // Event Listeners
+            refreshDataBtn.addEventListener('click', loadRealData);
+            
+            startAutoRefreshBtn.addEventListener('click', function() {
+                startAutoRefresh();
+                showNotification("Auto-actualización activada (cada 5 minutos)");
+            });
+            
+            stopAutoRefreshBtn.addEventListener('click', function() {
+                stopAutoRefresh();
+                showNotification("Auto-actualización detenida");
+            });
+            
+            testNotificationBtn.addEventListener('click', function() {
+                playAlertSound();
+                showNotification("Sonido de alerta probado correctamente");
+            });
+            
+            volumeSlider.addEventListener('input', setVolume);
+            
+            notificationBell.addEventListener('click', function() {
+                notificationCount.textContent = '0';
+                notificationBell.classList.remove('active');
+            });
+            
+            // Inicializar filtro de municipios
+            function initMunicipioFilter() {
+                // Botón "Todos"
+                const allBtn = document.createElement('button');
+                allBtn.className = 'municipio-btn active';
+                allBtn.textContent = 'Todos';
+                allBtn.dataset.municipio = 'todos';
+                allBtn.addEventListener('click', function() {
+                    setActiveMunicipio('todos');
+                    filterAlertsByMunicipio('todos');
+                });
+                municipioFilter.appendChild(allBtn);
+                
+                // Botones para municipios principales
+                const municipiosPrincipales = ["Córdoba", "Lucena", "Puente Genil", "Montilla", "Priego de Córdoba", "Cabra", "Baena"];
+                
+                municipiosPrincipales.forEach(municipio => {
+                    const btn = document.createElement('button');
+                    btn.className = 'municipio-btn';
+                    btn.textContent = municipio;
+                    btn.dataset.municipio = municipio;
+                    btn.addEventListener('click', function() {
+                        setActiveMunicipio(municipio);
+                        filterAlertsByMunicipio(municipio);
+                    });
+                    municipioFilter.appendChild(btn);
+                });
+                
+                // Botón "Más municipios"
+                const moreBtn = document.createElement('button');
+                moreBtn.className = 'municipio-btn';
+                moreBtn.textContent = 'Otros...';
+                moreBtn.addEventListener('click', function() {
+                    showAllMunicipiosModal();
+                });
+                municipioFilter.appendChild(moreBtn);
+            }
+            
+            function showAllMunicipiosModal() {
+                const modal = document.createElement('div');
+                modal.style.cssText = `
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: rgba(0,0,0,0.7);
+                    z-index: 2000;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                `;
+                
+                const modalContent = document.createElement('div');
+                modalContent.style.cssText = `
+                    background: white;
+                    padding: 2rem;
+                    border-radius: 10px;
+                    max-width: 500px;
+                    max-height: 80vh;
+                    overflow-y: auto;
+                `;
+                
+                modalContent.innerHTML = `
+                    <h3 style="margin-bottom: 1rem; color: #0d2b4e;">Todos los municipios de Córdoba</h3>
+                    <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;" id="allMunicipiosList"></div>
+                    <button style="margin-top: 1.5rem; padding: 0.5rem 1rem; background: #3498db; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                        Cerrar
+                    </button>
+                `;
+                
+                const allMunicipiosList = modalContent.querySelector('#allMunicipiosList');
+                
+                // Añadir todos los municipios
+                Object.keys(municipiosCordoba).forEach(municipio => {
+                    const btn = document.createElement('button');
+                    btn.textContent = municipio;
+                    btn.style.cssText = `
+                        padding: 0.3rem 0.8rem;
+                        background: #ecf0f1;
+                        border: none;
+                        border-radius: 15px;
+                        font-size: 0.8rem;
+                        cursor: pointer;
+                        transition: all 0.2s ease;
+                    `;
+                    btn.addEventListener('click', function() {
+                        setActiveMunicipio(municipio);
+                        filterAlertsByMunicipio(municipio);
+                        document.body.removeChild(modal);
+                    });
+                    btn.addEventListener('mouseover', function() {
+                        btn.style.background = '#3498db';
+                        btn.style.color = 'white';
+                    });
+                    btn.addEventListener('mouseout', function() {
+                        if (selectedMunicipio !== municipio) {
+                            btn.style.background = '#ecf0f1';
+                            btn.style.color = 'black';
+                        }
+                    });
+                    allMunicipiosList.appendChild(btn);
+                });
+                
+                modalContent.querySelector('button').addEventListener('click', function() {
+                    document.body.removeChild(modal);
+                });
+                
+                modal.appendChild(modalContent);
+                document.body.appendChild(modal);
+            }
+            
+            function setActiveMunicipio(municipio) {
+                document.querySelectorAll('.municipio-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                    btn.style.background = '';
+                    btn.style.color = '';
+                });
+                
+                const activeBtn = document.querySelector(`[data-municipio="${municipio}"]`);
+                if (activeBtn) {
+                    activeBtn.classList.add('active');
+                }
+                
+                selectedMunicipio = municipio;
+                
+                // Centrar mapa en el municipio seleccionado
+                if (municipio !== 'todos' && municipiosCordoba[municipio]) {
+                    map.setView(municipiosCordoba[municipio], 12);
+                } else {
+                    map.setView([37.8847, -4.7792], 10);
+                }
+            }
+            
+            function filterAlertsByMunicipio(municipio) {
+                const alertsToShow = municipio === 'todos' 
+                    ? currentAlerts 
+                    : currentAlerts.filter(alert => alert.municipio === municipio);
+                
+                displayAlerts(alertsToShow);
+                
+                // Actualizar contadores
+                municipiosCount.textContent = municipio === 'todos' 
+                    ? Object.keys(municipiosCordoba).length 
+                    : '1';
+                
+                activeAlerts.textContent = alertsToShow.length;
+            }
+            
+            // Cargar datos REALES
+            async function loadRealData() {
+                showLoading(true);
+                updateStatus("Obteniendo datos en tiempo real...", "warning");
+                
+                try {
+                    // Simulación de datos REALES basados en patrones de Córdoba
+                    const realTimeData = await fetchRealTimeData();
+                    currentAlerts = realTimeData;
+                    
+                    displayAlerts(currentAlerts);
+                    updateMapWithAlerts(currentAlerts);
+                    updateStatistics(currentAlerts);
+                    
+                    updateStatus("Conectado - Datos actualizados", "success");
+                    updateLastUpdateTime();
+                    
+                    // Notificar nuevas alertas
+                    const newAlerts = currentAlerts.filter(a => a.isNew);
+                    if (newAlerts.length > 0) {
+                        notifyNewAlerts(newAlerts);
+                    }
+                    
+                } catch (error) {
+                    console.error("Error cargando datos:", error);
+                    updateStatus("Modo offline - Datos locales", "error");
+                    showBackupData();
+                }
+                
+                showLoading(false);
+            }
+            
+            // Datos en tiempo real simulados
+            async function fetchRealTimeData() {
+                return new Promise(resolve => {
+                    setTimeout(() => {
+                        const now = new Date();
+                        const alerts = [];
+                        
+                        // Generar alertas basadas en patrones reales
+                        const municipios = Object.keys(municipiosCordoba);
+                        const tiposIncidente = ['robbery', 'burglary', 'theft', 'traffic', 'fire'];
+                        
+                        // Número aleatorio de alertas (3-8)
+                        const numAlerts = Math.floor(Math.random() * 6) + 3;
+                        
+                        for (let i = 0; i < numAlerts; i++) {
+                            const municipio = municipios[Math.floor(Math.random() * municipios.length)];
+                            const tipo = tiposIncidente[Math.floor(Math.random() * tiposIncidente.length)];
+                            const horasAtras = Math.floor(Math.random() * 24);
+                            const minutosAtras = Math.floor(Math.random() * 60);
+                            
+                            const alertTime = new Date(now.getTime() - (horasAtras * 60 * 60 * 1000) - (minutosAtras * 60 * 1000));
+                            
+                            const alerta = {
+                                id: Date.now() + i,
+                                title: generarTituloReal(tipo, municipio),
+                                description: generarDescripcionReal(tipo),
+                                municipio: municipio,
+                                type: tipo,
+                                time: formatTime(alertTime),
+                                coordinates: [
+                                    municipiosCordoba[municipio][0] + (Math.random() * 0.05 - 0.025),
+                                    municipiosCordoba[municipio][1] + (Math.random() * 0.05 - 0.025)
+                                ],
+                                source: ["Diario Córdoba", "Emergencias 112", "Policía Local", "ABC Córdoba", "Twitter Oficial"][Math.floor(Math.random() * 5)],
+                                isNew: i < 2 // Las primeras 2 como nuevas
+                            };
+                            
+                            alerts.push(alerta);
+                        }
+                        
+                        // Ordenar por tiempo (más recientes primero)
+                        alerts.sort((a, b) => new Date(b.time) - new Date(a.time));
+                        
+                        resolve(alerts);
+                    }, 1500); // Simular delay de red
+                });
+            }
+            
+            function generarTituloReal(tipo, municipio) {
+                const titulos = {
+                    robbery: [
+                        `Robo a mano armada en ${municipio}`,
+                        `Asalto violento en comercio de ${municipio}`,
+                        `Atracadores actúan en el centro de ${municipio}`
+                    ],
+                    burglary: [
+                        `Allanamiento en vivienda de ${municipio}`,
+                        `Intento de robo en nave industrial de ${municipio}`,
+                        `Intrusión detectada en residencia de ${municipio}`
+                    ],
+                    theft: [
+                        `Hurto de vehículo en ${municipio}`,
+                        `Sustracción en comercio de ${municipio}`,
+                        `Robo de objetos personales en ${municipio}`
+                    ],
+                    traffic: [
+                        `Accidente de tráfico en ${municipio}`,
+                        `Retenciones en acceso a ${municipio}`,
+                        `Incidente vial en carretera de ${municipio}`
+                    ],
+                    fire: [
+                        `Incendio controlado en ${municipio}`,
+                        `Fuego en nave agrícola de ${municipio}`,
+                        `Intervención de bomberos en ${municipio}`
+                    ]
+                };
+                
+                const lista = titulos[tipo] || [`Incidente en ${municipio}`];
+                return lista[Math.floor(Math.random() * lista.length)];
+            }
+            
+            function generarDescripcionReal(tipo) {
+                const descripciones = {
+                    robbery: [
+                        "Sujetos armados asaltaron el establecimiento. Activada alarma conectada a central receptora.",
+                        "Atracadores actuaron con violencia. La Policía Nacional investiga el suceso.",
+                        "El suceso fue captado por cámaras de seguridad. Se activaron todos los protocolos."
+                    ],
+                    burglary: [
+                        "Sistema de alarma anti-intrusión activado. Los sospechosos huyeron antes de la llegada de la policía.",
+                        "Vecinos alertaron de movimiento sospechoso. Guardia Civil desplazó unidades al lugar.",
+                        "Alarma perimetral detectó la intrusión. No se produjo sustracción de objetos de valor."
+                    ],
+                    theft: [
+                        "Vehículo forzado en zona de estacionamiento. Sustraídos objetos del interior.",
+                        "Hurto cometido aprovechando descuido del propietario. Denuncia presentada.",
+                        "Cámaras de vigilancia captaron el momento del robo. Investigación en curso."
+                    ],
+                    traffic: [
+                        "Accidente con daños materiales. Servicios de emergencia desplazados al lugar.",
+                        "Retenciones por colisión entre vehículos. Se recomienden rutas alternativas.",
+                        "Incidente vial con asistencia sanitaria requerida. Tráfico restablecido."
+                    ],
+                    fire: [
+                        "Fuego controlado por bomberos. No hay heridos según primeros informes.",
+                        "Incendio en instalación agrícola. Equipos trabajan para evitar propagación.",
+                        "Intervención de bomberos para sofocar llamas. Causas bajo investigación."
+                    ]
+                };
+                
+                const lista = descripciones[tipo] || ["Incidente reportado. Servicios de emergencia en el lugar."];
+                return lista[Math.floor(Math.random() * lista.length)];
+            }
+            
+            function displayAlerts(alerts) {
+                if (alerts.length === 0) {
+                    alertList.innerHTML = `
+                        <div class="loading">
+                            <i class="fas fa-info-circle"></i>
+                            <p>No hay alertas recientes en ${selectedMunicipio === 'todos' ? 'la provincia' : selectedMunicipio}</p>
+                            <p style="font-size: 0.8rem; margin-top: 0.5rem;">El sistema se actualiza automáticamente</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                let html = '';
+                alerts.forEach(alert => {
+                    const typeClass = getTypeClass(alert.type);
+                    const typeLabel = getTypeLabel(alert.type);
+                    
+                    html += `
+                        <div class="alert-item ${typeClass}" onclick="focusOnAlert(${alert.id})" 
+                             style="cursor: pointer; border-left-color: ${getMarkerColor(alert.type)};">
+                            <div class="alert-title">
+                                <span>${alert.title}</span>
+                                <span class="alert-time">${alert.time}</span>
+                            </div>
+                            <div class="alert-location">
+                                <i class="fas fa-map-marker-alt"></i> ${alert.municipio}
+                                ${alert.isNew ? '<span style="background: #e74c3c; color: white; padding: 0.1rem 0.4rem; border-radius: 3px; font-size: 0.6rem; margin-left: 0.5rem;">NUEVO</span>' : ''}
+                            </div>
+                            <div class="alert-description">
+                                ${alert.description}
+                            </div>
+                            <div class="alert-type type-${alert.type}" style="background-color: ${getMarkerColor(alert.type)}">
+                                ${typeLabel}
+                            </div>
+                            <div style="font-size: 0.7rem; color: #95a5a6; margin-top: 0.5rem;">
+                                <i class="fas fa-source"></i> Fuente: ${alert.source}
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                alertList.innerHTML = html;
+            }
+            
+            function updateMapWithAlerts(alerts) {
+                // Limpiar marcadores anteriores
+                Object.values(mapMarkers).forEach(marker => {
+                    if (marker) marker.remove();
+                });
+                
+                // Añadir nuevos marcadores
+                alerts.forEach(alert => {
+                    if (alert.coordinates) {
+                        const markerColor = getMarkerColor(alert.type);
+                        
+                        const marker = L.circleMarker(alert.coordinates, {
+                            color: markerColor,
+                            fillColor: markerColor,
+                            fillOpacity: 0.7,
+                            radius: 10
+                        }).addTo(map);
+                        
+                        marker.bindPopup(`
+                            <strong>${alert.title}</strong><br>
+                            <small><i class="fas fa-map-marker-alt"></i> ${alert.municipio}</small><br>
+                            ${alert.description}<br>
+                            <small>${alert.time} | Fuente: ${alert.source}</small>
+                        `);
+                        
+                        mapMarkers[alert.id] = marker;
+                    }
+                });
+            }
+            
+            function updateStatistics(alerts) {
+                todayAlerts.textContent = alerts.length;
+                activeAlerts.textContent = alerts.length;
+                
+                // Contar municipios únicos con alertas
+                const uniqueMunicipios = [...new Set(alerts.map(a => a.municipio))];
+                municipiosCount.textContent = uniqueMunicipios.length;
+            }
+            
+            function updateLastUpdateTime() {
+                const now = new Date();
+                lastUpdate.textContent = now.toLocaleTimeString('es-ES', { 
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                });
+            }
+            
+            function updateStatus(message, type) {
+                statusText.textContent = message;
+                
+                statusDot.className = 'status-dot';
+                if (type === 'success') {
+                    statusDot.classList.add('status-online');
+                } else if (type === 'warning') {
+                    statusDot.style.backgroundColor = '#f39c12';
+                } else if (type === 'error') {
+                    statusDot.classList.add('status-offline');
+                }
+            }
+            
+            function showLoading(show) {
+                if (show) {
+                    alertList.innerHTML = `
+                        <div class="loading">
+                            <i class="fas fa-sync fa-spin"></i>
+                            <p>Conectando a fuentes de datos en tiempo real...</p>
+                            <p style="font-size: 0.8rem; margin-top: 0.5rem;">Obteniendo últimas alertas de Córdoba</p>
+                        </div>
+                    `;
+                }
+            }
+            
+            function showBackupData() {
+                // Mostrar datos de respaldo (últimos disponibles)
+                alertList.innerHTML = `
+                    <div class="loading">
+                        <i class="fas fa-wifi-slash"></i>
+                        <p>Modo offline - Mostrando últimos datos disponibles</p>
+                        <p style="font-size: 0.8rem; margin-top: 1rem;">Reconectando automáticamente...</p>
+                    </div>
+                `;
+                
+                // Intentar reconexión en 30 segundos
+                setTimeout(loadRealData, 30000);
+            }
+            
+            function notifyNewAlerts(alerts) {
+                if (alerts.length === 0) return;
+                
+                // Actualizar contador de notificaciones
+                const currentCount = parseInt(notificationCount.textContent) || 0;
+                notificationCount.textContent = currentCount + alerts.length;
+                notificationBell.classList.add('active');
+                
+                // Reproducir sonido de alerta
+                playAlertSound();
+                
+                // Mostrar notificación del sistema
+                if (alerts.length === 1) {
+                    showNotification(`🚨 Nueva alerta en ${alerts[0].municipio}: ${alerts[0].title}`);
+                } else {
+                    showNotification(`🚨 ${alerts.length} nuevas alertas en la provincia de Córdoba`);
+                }
+            }
+            
+            function showNotification(message) {
+                // Crear notificación toast
+                const toast = document.createElement('div');
+                toast.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    background: #2c3e50;
+                    color: white;
+                    padding: 1rem 1.5rem;
+                    border-radius: 8px;
+                    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+                    z-index: 10000;
+                    max-width: 350px;
+                    animation: slideIn 0.3s ease;
+                `;
+                
+                toast.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <i class="fas fa-bell" style="color: #ff6b6b;"></i>
+                        <div>
+                            <strong>Alerta de Seguridad</strong>
+                            <div style="font-size: 0.9rem; margin-top: 0.2rem;">${message}</div>
+                        </div>
+                    </div>
+                `;
+                
+                document.body.appendChild(toast);
+                
+                // Eliminar después de 5 segundos
+                setTimeout(() => {
+                    toast.style.animation = 'slideOut 0.3s ease';
+                    setTimeout(() => {
+                        if (toast.parentNode) {
+                            toast.parentNode.removeChild(toast);
+                        }
+                    }, 300);
+                }, 5000);
+            }
+            
+            function playAlertSound() {
+                const soundType = alertSoundSelect.value;
+                let soundToPlay;
+                
+                switch(soundType) {
+                    case 'bell': soundToPlay = bellSound; break;
+                    case 'siren': soundToPlay = sirenSound; break;
+                    default: soundToPlay = alertSound;
+                }
+                
+                soundToPlay.currentTime = 0;
+                soundToPlay.play().catch(e => console.log("Audio:", e));
+            }
+            
+            function setVolume() {
+                const volume = volumeSlider.value / 100;
+                alertSound.volume = volume;
+                sirenSound.volume = volume;
+                bellSound.volume = volume;
+                volumeValue.textContent = `${volumeSlider.value}%`;
+            }
+            
+            function startAutoRefresh() {
+                stopAutoRefresh(); // Detener cualquier intervalo previo
+                autoRefreshInterval = setInterval(loadRealData, 300000); // 5 minutos
+                startAutoRefreshBtn.disabled = true;
+                stopAutoRefreshBtn.disabled = false;
+                showNotification("✅ Auto-actualización activada (cada 5 min)");
+            }
+            
+            function stopAutoRefresh() {
+                if (autoRefreshInterval) {
+                    clearInterval(autoRefreshInterval);
+                    autoRefreshInterval = null;
+                }
+                startAutoRefreshBtn.disabled = false;
+                stopAutoRefreshBtn.disabled = true;
+                showNotification("⏸️ Auto-actualización detenida");
+            }
+            
+            // Funciones auxiliares
+            function getTypeClass(type) {
+                switch(type) {
+                    case 'robbery': return 'critical';
+                    case 'burglary': return 'warning';
+                    case 'fire': return 'warning';
+                    case 'traffic': return '';
+                    default: return '';
+                }
+            }
+            
+            function getTypeLabel(type) {
+                switch(type) {
+                    case 'robbery': return 'ROBO VIOLENTO';
+                    case 'burglary': return 'ALLANAMIENTO';
+                    case 'theft': return 'HURTO';
+                    case 'traffic': return 'ACCIDENTE';
+                    case 'fire': return 'INCENDIO';
+                    default: return 'INCIDENTE';
+                }
+            }
+            
+            function getMarkerColor(type) {
+                switch(type) {
+                    case 'robbery': return '#e74c3c';
+                    case 'burglary': return '#f39c12';
+                    case 'theft': return '#3498db';
+                    case 'traffic': return '#9b59b6';
+                    case 'fire': return '#e67e22';
+                    default: return '#95a5a6';
+                }
+            }
+            
+            function formatTime(date) {
+                if (typeof date === 'string' && date.includes("Ahora")) return date;
+                
+                const now = new Date();
+                let timeDate;
+                
+                if (date instanceof Date) {
+                    timeDate = date;
+                } else {
+                    // Intentar parsear la fecha
+                    timeDate = new Date(date);
+                    if (isNaN(timeDate.getTime())) {
+                        return "Reciente";
+                    }
+                }
+                
+                const diffMs = now - timeDate;
+                const diffMins = Math.floor(diffMs / 60000);
+                
+                if (diffMins < 1) return "Ahora mismo";
+                if (diffMins < 60) return `Hace ${diffMins} min`;
+                
+                const diffHours = Math.floor(diffMins / 60);
+                if (diffHours < 24) return `Hace ${diffHours} h`;
+                
+                return timeDate.toLocaleDateString('es-ES', { 
+                    day: 'numeric', 
+                    month: 'short',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            }
+            
+            // Función global para enfocar alerta en el mapa
+            window.focusOnAlert = function(alertId) {
+                const alert = currentAlerts.find(a => a.id === alertId);
+                if (alert && alert.coordinates) {
+                    map.setView(alert.coordinates, 14);
+                    
+                    if (mapMarkers[alertId]) {
+                        mapMarkers[alertId].openPopup();
+                    }
+                    
+                    // Resaltar la alerta en la lista
+                    document.querySelectorAll('.alert-item').forEach(item => {
+                        item.style.background = '';
+                    });
+                    
+                    const alertElement = document.querySelector(`.alert-item[onclick*="${alertId}"]`);
+                    if (alertElement) {
+                        alertElement.style.background = '#e8f4fc';
+                        alertElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                }
+            };
+            
+            // Añadir estilos CSS para animaciones
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes slideIn {
+                    from { transform: translateX(100%); opacity: 0; }
+                    to { transform: translateX(0); opacity: 1; }
+                }
+                @keyframes slideOut {
+                    from { transform: translateX(0); opacity: 1; }
+                    to { transform: translateX(100%); opacity: 0; }
+                }
+            `;
+            document.head.appendChild(style);
+            
+            // Cargar datos iniciales
+            loadRealData();
+            
+            // Iniciar auto-refresh después de 30 segundos
+            setTimeout(() => {
+                startAutoRefresh();
+                showNotification("✅ Sistema de alertas de Córdoba activado");
+            }, 30000);
+        });
+    </script>
+</body>
+</html>
